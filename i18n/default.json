@@ -29,5 +29,6 @@
   "magnetic-buff.tooltip": "Magnetic radius increase granted per Stardrop. Default: 1",
   "debugging.label": "Debugging Options",
   "smapi.label": "Show SMAPI Logging",
-  "smapi.tooltip": "Shows informational logs in SMAPI console"
+  "smapi.tooltip": "Shows informational logs in SMAPI console",
+  "more-settings.text": "More settings available in main menu."
 }

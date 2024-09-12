@@ -1,5 +1,5 @@
 ﻿namespace BetterStardrops {
-    internal class ModConfig {
+    public class ModConfig {
 
         public bool ShowLogging { get; set; } = false;
 
@@ -17,7 +17,7 @@
         public bool ResetMaxHealth { get; set; } = false;
 
         public bool EnableStamina { get; set; } = true;
-        public int StaminaIncreaseAmount { get; set; } = 6;
+        public int MaxStaminaIncreaseAmount { get; set; } = 6;
 
         public bool EnableCombatLevel { get; set; } = false;
         public int CombatLevelIncreaseAmount { get; set; } = 1;
@@ -38,7 +38,7 @@
         public int MiningLevelIncreaseAmount { get; set; } = 1;
 
         public bool EnableMagnetic { get; set; } = false;
-        public int MagneticIncreaseAmount { get; set; } = 1;
+        public int MagneticRadiusIncreaseAmount { get; set; } = 1;
 
     }
 }
