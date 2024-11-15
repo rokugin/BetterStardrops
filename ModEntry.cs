@@ -1,326 +1,198 @@
 ﻿using StardewModdingAPI;
 using StardewValley;
-using StardewValley.Buffs;
 using StardewValley.Menus;
 using StardewModdingAPI.Events;
 
-namespace BetterStardrops {
-    public class ModEntry : Mod {
+namespace BetterStardrops;
 
-        int stardropsFound;
+public class ModEntry : Mod {
 
-        public static ModConfig Config = new();
-        
-        LogLevel DesiredLogLevel => Config.ShowLogging ? LogLevel.Info : LogLevel.Trace;
+    public static ModConfig Config = new();
+    public static IMonitor SMonitor = null!;
 
-        public override void Entry(IModHelper helper) {
-            Config = helper.ReadConfig<ModConfig>();
-            
-            helper.Events.GameLoop.DayStarted += OnDayStarted;
-            helper.Events.GameLoop.DayEnding += OnDayEnding;
-            helper.Events.GameLoop.GameLaunched += OnGameLaunched;
-            helper.Events.GameLoop.SaveCreated += OnSaveCreated;
-            helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
-        }
+    public static LogLevel DesiredLogLevel => Config.ShowLogging ? LogLevel.Info : LogLevel.Trace;
 
-        private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e) {
-            SetUpGMCM();
-        }
+    bool doHealthRegen;
+    bool doStaminaRegen;
+    float healthRecoveryTick = 0;
+    float staminaRecoveryTick = 0;
 
-        private void OnSaveCreated(object? sender, SaveCreatedEventArgs e) {
-            LevelUpMenu.RevalidateHealth(Game1.player);
-            Monitor.Log("\nNew save started, resetting health just in case.", DesiredLogLevel);
-        }
+    public override void Entry(IModHelper helper) {
+        SMonitor = Monitor;
+        Config = helper.ReadConfig<ModConfig>();
+        I18n.Init(helper.Translation);
 
-        private void OnGameLaunched(object? sender, GameLaunchedEventArgs e) {
-            SetUpGMCM();
-        }
+        helper.Events.GameLoop.DayStarted += OnDayStarted;
+        helper.Events.GameLoop.GameLaunched += OnGameLaunched;
+        helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
+    }
 
-        private void OnDayEnding(object? sender, DayEndingEventArgs e) {
-            if (!Config.EnableHealth) return;
-            if (stardropsFound < 1) return;
+    private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e) {
+        if (!Context.IsPlayerFree) return;
 
-            LevelUpMenu.RevalidateHealth(Game1.player);
-
-            if (stardropsFound > 0) Monitor.Log("\nHealth reset to prepare for next day calculations", DesiredLogLevel);
-        }
-
-        private void OnDayStarted(object? sender, DayStartedEventArgs e) {
-            SetUpGMCM();
-            if (Config.ResetMaxHealth) {
-                Monitor.Log("\nPerforming requested max health reset.", DesiredLogLevel);
-                LevelUpMenu.RevalidateHealth(Game1.player);
-                Config.ResetMaxHealth = false;
+        if (doHealthRegen) {
+            if (e.IsOneSecond) {
+                healthRecoveryTick += Config.HealthRegenAmount;
             }
 
-            stardropsFound = Utility.numStardropsFound(Game1.player);
-            if (stardropsFound < 1) {
-                Monitor.Log("\nNo stardrops found, do nothing", DesiredLogLevel);
-                return;
-            }
-
-            Monitor.Log($"\nPlayer has found {stardropsFound} Stardrops", DesiredLogLevel);
-            if (stardropsFound > 0) {
-                Buff buff = new Buff(
-                id: $"{ModManifest.UniqueID}_StardropBuffs",
-                source: $"{ModManifest.UniqueID}",
-                displaySource: $"{stardropsFound} Stardrops",
-                duration: Buff.ENDLESS,
-                effects: new BuffEffects() {
-                    Attack = { Config.EnableAttack ? Config.AttackIncreaseAmount * stardropsFound : 0 },
-                    Defense = { Config.EnableDefense ? Config.DefenseIncreaseAmount * stardropsFound : 0 },
-                    Immunity = { Config.EnableImmunity ? Config.ImmunityIncreaseAmount * stardropsFound : 0 },
-                    MaxStamina = { Config.EnableStamina ? Config.MaxStaminaIncreaseAmount * stardropsFound : 0 },
-                    CombatLevel = { Config.EnableCombatLevel ? Config.CombatLevelIncreaseAmount * stardropsFound : 0 },
-                    FarmingLevel = { Config.EnableFarmingLevel ? Config.FarmingLevelIncreaseAmount * stardropsFound : 0 },
-                    FishingLevel = { Config.EnableFishingLevel ? Config.FishingLevelIncreaseAmount * stardropsFound : 0 },
-                    ForagingLevel = { Config.EnableForagingLevel ? Config.ForagingLevelIncreaseAmount * stardropsFound : 0 },
-                    LuckLevel = { Config.EnableLuckLevel ? Config.LuckLevelIncreaseAmount * stardropsFound : 0 },
-                    MiningLevel = { Config.EnableMiningLevel ? Config.MiningLevelIncreaseAmount * stardropsFound : 0 },
-                    MagneticRadius = { Config.EnableMagnetic ? Config.MagneticRadiusIncreaseAmount * stardropsFound : 0 },
-                });
-                
-                Game1.player.applyBuff(buff);
-                buff.visible = Config.ShowLogging;
-
-                Game1.player.stamina = Game1.player.MaxStamina;
-                Game1.player.maxHealth += Config.EnableHealth ? Config.HealthIncreaseAmount * stardropsFound : 0;
-                Game1.player.health = Game1.player.maxHealth;
+            if (healthRecoveryTick >= 1) {
+                healthRecoveryTick -= 1;
+                if (Game1.player.health < Game1.player.maxHealth) {
+                    Game1.player.health += 1;
+                }
             }
         }
 
-        void SetUpGMCM() {
-            var configMenu = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
-            if (configMenu is null) return;
+        if (doStaminaRegen) {
+            if (e.IsOneSecond) {
+                staminaRecoveryTick += Config.StaminaRegenAmount;
+            }
 
-            configMenu.Unregister(ModManifest);
-            
-            configMenu.Register(ModManifest, () => Config = new ModConfig(), () => Helper.WriteConfig(Config));
-
-            configMenu.SetTitleScreenOnlyForNextOptions(ModManifest, true);
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("attack-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableAttack,
-                setValue: value => Config.EnableAttack = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.AttackIncreaseAmount,
-                setValue: value => Config.AttackIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("attack-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("defense-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableDefense,
-                setValue: value => Config.EnableDefense = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.DefenseIncreaseAmount,
-                setValue: value => Config.DefenseIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("defense-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("immunity-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableImmunity,
-                setValue: value => Config.EnableImmunity = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.ImmunityIncreaseAmount,
-                setValue: value => Config.ImmunityIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("immunity-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("health-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableHealth,
-                setValue: value => Config.EnableHealth = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.HealthIncreaseAmount,
-                setValue: value => Config.HealthIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("health-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.ResetMaxHealth,
-                setValue: value => Config.ResetMaxHealth = value,
-                name: () => Helper.Translation.Get("health-reset.label"),
-                tooltip: () => Helper.Translation.Get("health-reset.tooltip")
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("stamina-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableStamina,
-                setValue: value => Config.EnableStamina = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.MaxStaminaIncreaseAmount,
-                setValue: value => Config.MaxStaminaIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("stamina-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("magnetic-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableMagnetic,
-                setValue: value => Config.EnableMagnetic = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.MagneticRadiusIncreaseAmount,
-                setValue: value => Config.MagneticRadiusIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("magnetic-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("combat-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableCombatLevel,
-                setValue: value => Config.EnableCombatLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.CombatLevelIncreaseAmount,
-                setValue: value => Config.CombatLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("combat-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("farming-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableFarmingLevel,
-                setValue: value => Config.EnableFarmingLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.FarmingLevelIncreaseAmount,
-                setValue: value => Config.FarmingLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("farming-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("fishing-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableFishingLevel,
-                setValue: value => Config.EnableFishingLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.FishingLevelIncreaseAmount,
-                setValue: value => Config.FishingLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("fishing-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("foraging-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableForagingLevel,
-                setValue: value => Config.EnableForagingLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.ForagingLevelIncreaseAmount,
-                setValue: value => Config.ForagingLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("foraging-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("luck-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableLuckLevel,
-                setValue: value => Config.EnableLuckLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.LuckLevelIncreaseAmount,
-                setValue: value => Config.LuckLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("luck-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("mining-options.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.EnableMiningLevel,
-                setValue: value => Config.EnableMiningLevel = value,
-                name: () => Helper.Translation.Get("enabled.label")
-            );
-            configMenu.AddNumberOption(
-                mod: ModManifest,
-                getValue: () => Config.MiningLevelIncreaseAmount,
-                setValue: value => Config.MiningLevelIncreaseAmount = value,
-                name: () => Helper.Translation.Get("buff-power.label"),
-                tooltip: () => Helper.Translation.Get("mining-buff.tooltip"),
-                min: 0,
-                max: null
-            );
-
-            configMenu.SetTitleScreenOnlyForNextOptions(ModManifest, false);
-            configMenu.AddSectionTitle(ModManifest, () => Helper.Translation.Get("debugging.label"));
-            configMenu.AddBoolOption(
-                mod: ModManifest,
-                getValue: () => Config.ShowLogging,
-                setValue: value => Config.ShowLogging = value,
-                name: () => Helper.Translation.Get("smapi.label"),
-                tooltip: () => Helper.Translation.Get("smapi.tooltip")
-            );
-            if (Game1.activeClickableMenu is not TitleMenu) {
-                configMenu.AddParagraph(ModManifest, () => Helper.Translation.Get("more-settings.text"));
+            if (staminaRecoveryTick >= 1) {
+                staminaRecoveryTick -= 1;
+                if (Game1.player.stamina < Game1.player.MaxStamina) {
+                    Game1.player.stamina += 1;
+                }
             }
         }
+    }
+
+    private void OnGameLaunched(object? sender, GameLaunchedEventArgs e) {
+        SetUpGMCM();
+    }
+
+    private void OnDayStarted(object? sender, DayStartedEventArgs e) {
+        doHealthRegen = Config.EnableHealthRegen;
+        doStaminaRegen = Config.EnableStaminaRegen;
+        StardropBuffs.DoBuffs(ModManifest.UniqueID, Config);
+    }
+
+    void SetUpGMCM() {
+        var CM = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
+        if (CM is null) return;
+
+        CM.Register(ModManifest, () => Config = new ModConfig(), () => Helper.WriteConfig(Config));
+
+        CM.AddParagraph(ModManifest, () => I18n.Info_Text());
+
+        CM.AddPageLink(ModManifest, "General", () => I18n.GeneralPage_Label());
+        CM.AddPageLink(ModManifest, "Combat", () => I18n.CombatPage_Label());
+        CM.AddPageLink(ModManifest, "Skills", () => I18n.SkillsPage_Label());
+
+        CM.AddParagraph(ModManifest, () => " ");
+
+        CM.AddSectionTitle(ModManifest, () => I18n.Debugging_Label());
+        CM.AddBoolOption(ModManifest, () => Config.ShowLogging, v => Config.ShowLogging = v,
+            () => I18n.EnableLogging_Label(), () => I18n.EnableLogging_Tooltip());
+
+        // General Section
+        CM.AddPage(ModManifest, "General", () => I18n.GeneralPage_Label());
+
+        CM.AddSectionTitle(ModManifest, () => I18n.HealthBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableHealth, v => Config.EnableHealth = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.HealthAmount, v => Config.HealthAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.HealthBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.HealthRegen_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableHealthRegen, v => Config.EnableHealthRegen = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.HealthRegenAmount, v => Config.HealthRegenAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.HealthRegen_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.StaminaBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableStamina, v => Config.EnableStamina = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.StaminaAmount, v => Config.StaminaAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.StaminaBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.StaminaRegen_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableStaminaRegen, v => Config.EnableStaminaRegen = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.StaminaRegenAmount, v => Config.StaminaRegenAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.StaminaRegen_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.MagneticBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableMagnetic, v => Config.EnableMagnetic = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.MagneticAmount, v => Config.MagneticAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.MagneticBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.SpeedBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableSpeed, v => Config.EnableSpeed = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.SpeedAmount, v => Config.SpeedAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.SpeedBuff_Tooltip(), 0, null);
+
+        // Combat Section
+        CM.AddPage(ModManifest, "Combat", () => I18n.CombatPage_Label());
+
+        CM.AddSectionTitle(ModManifest, () => I18n.AttackBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableAttack, v => Config.EnableAttack = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.AttackAmount, v => Config.AttackAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.AttackBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.AttackMultiplierBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableAttackMult, v => Config.EnableAttackMult = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.AttackMultAmount, v => Config.AttackMultAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.AttackMultiplierBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.CriticalChanceMultiplierBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableCriticalChance, v => Config.EnableCriticalChance = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.CriticalChanceAmount, v => Config.CriticalChanceAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.CriticalChanceMultiplierBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.CriticalPowerMultiplierBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableCriticalPower, v => Config.EnableCriticalPower = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.CriticalPowerAmount, v => Config.CriticalPowerAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.CriticalPowerMultiplierBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.KnockbackMultiplierBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableKnockback, v => Config.EnableKnockback = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.KnockbackAmount, v => Config.KnockbackAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.KnockbackMultiplierBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.WeaponSpeedMultiplierBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableWeaponSpeed, v => Config.EnableWeaponSpeed = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.WeaponSpeedAmount, v => Config.WeaponSpeedAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.WeaponSpeedMultiplierBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.DefenseBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableDefense, v => Config.EnableDefense = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.DefenseAmount, v => Config.DefenseAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.DefenseBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.ImmunityBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableImmunity, v => Config.EnableImmunity = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.ImmunityAmount, v => Config.ImmunityAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.ImmunityBuff_Tooltip(), 0, null);
+
+        // Skill Section
+        CM.AddPage(ModManifest, "Skills", () => I18n.SkillsPage_Label());
+        CM.AddParagraph(ModManifest, () => I18n.SkillsInfo_Text());
+
+        CM.AddSectionTitle(ModManifest, () => I18n.CombatBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableCombat, v => Config.EnableCombat = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.CombatAmount, v => Config.CombatAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.CombatBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.FarmingBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableFarming, v => Config.EnableFarming = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.FarmingAmount, v => Config.FarmingAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.FarmingBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.FishingBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableFishing, v => Config.EnableFishing = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.FishingAmount, v => Config.FishingAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.FishingBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.ForagingBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableForaging, v => Config.EnableForaging = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.ForagingAmount, v => Config.ForagingAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.ForagingBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.LuckBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableLuck, v => Config.EnableLuck = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.LuckAmount, v => Config.LuckAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.LuckBuff_Tooltip(), 0, null);
+
+        CM.AddSectionTitle(ModManifest, () => I18n.MiningBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.EnableMining, v => Config.EnableMining = v, () => I18n.Enabled_Label());
+        CM.AddNumberOption(ModManifest, () => Config.MiningAmount, v => Config.MiningAmount = v,
+            () => I18n.BuffPower_Label(), () => I18n.MiningBuff_Tooltip(), 0, null);
     }
 }

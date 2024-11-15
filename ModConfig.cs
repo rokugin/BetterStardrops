@@ -3,42 +3,65 @@
 
         public bool ShowLogging { get; set; } = false;
 
-        public bool EnableAttack { get; set; } = false;
-        public int AttackIncreaseAmount { get; set; } = 5;
+        public bool EnableAttack { get; set; } = true;
+        public float AttackAmount { get; set; } = 3f;
 
         public bool EnableDefense { get; set; } = true;
-        public int DefenseIncreaseAmount { get; set; } = 3;
+        public float DefenseAmount { get; set; } = 3;
 
         public bool EnableImmunity { get; set; } = true;
-        public int ImmunityIncreaseAmount { get; set; } = 3;
+        public float ImmunityAmount { get; set; } = 0.43f;
 
         public bool EnableHealth { get; set; } = true;
-        public int HealthIncreaseAmount { get; set; } = 15;
-        public bool ResetMaxHealth { get; set; } = false;
+        public int HealthAmount { get; set; } = 14;
 
         public bool EnableStamina { get; set; } = true;
-        public int MaxStaminaIncreaseAmount { get; set; } = 6;
+        public float StaminaAmount { get; set; } = 6;
 
-        public bool EnableCombatLevel { get; set; } = false;
-        public int CombatLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableCombat { get; set; } = true;
+        public float CombatAmount { get; set; } = 0.72f;
 
-        public bool EnableFarmingLevel { get; set; } = false;
-        public int FarmingLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableFarming { get; set; } = true;
+        public float FarmingAmount { get; set; } = 0.72f;
 
-        public bool EnableFishingLevel { get; set; } = false;
-        public int FishingLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableFishing { get; set; } = true;
+        public float FishingAmount { get; set; } = 0.72f;
 
-        public bool EnableForagingLevel { get; set; } = false;
-        public int ForagingLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableForaging { get; set; } = true;
+        public float ForagingAmount { get; set; } = 0.72f;
 
-        public bool EnableLuckLevel { get; set; } = false;
-        public int LuckLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableLuck { get; set; } = true;
+        public float LuckAmount { get; set; } = 0.72f;
 
-        public bool EnableMiningLevel { get; set; } = false;
-        public int MiningLevelIncreaseAmount { get; set; } = 1;
+        public bool EnableMining { get; set; } = true;
+        public float MiningAmount { get; set; } = 0.72f;
 
-        public bool EnableMagnetic { get; set; } = false;
-        public int MagneticRadiusIncreaseAmount { get; set; } = 1;
+        public bool EnableMagnetic { get; set; } = true;
+        public float MagneticAmount { get; set; } = 64;
+
+        public bool EnableAttackMult { get; set; } = true;
+        public float AttackMultAmount { get; set; } = 0.03f;
+
+        public bool EnableCriticalChance { get; set; } = true;
+        public float CriticalChanceAmount { get; set; } = 0.03f;
+
+        public bool EnableCriticalPower { get; set; } = true;
+        public float CriticalPowerAmount { get; set; } = 0.03f;
+
+        public bool EnableKnockback { get; set; } = true;
+        public float KnockbackAmount { get; set; } = 0.03f;
+
+        public bool EnableSpeed { get; set; } = true;
+        public float SpeedAmount { get; set; } = 0.3f;
+
+        public bool EnableWeaponSpeed { get; set; } = true;
+        public float WeaponSpeedAmount { get; set; } = 0.03f;
+
+        public bool EnableHealthRegen { get; set; } = true;
+        public float HealthRegenAmount { get; set; } = 0.15f;
+
+        public bool EnableStaminaRegen { get; set; } = true;
+        public float StaminaRegenAmount { get; set; } = 0.15f;
 
     }
 }
