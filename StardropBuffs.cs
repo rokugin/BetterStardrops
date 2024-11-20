@@ -1,8 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Buffs;
-using StardewValley.Menus;
 
 namespace BetterStardrops;
 
@@ -10,7 +10,7 @@ public class StardropBuffs {
 
     static int stardropsFound;
 
-    public static void DoBuffs(string id, ModConfig Config) {
+    public static void DoBuffs(string id, ModConfig Config, IModHelper helper) {
         stardropsFound = Utility.numStardropsFound(Game1.player);
 
         if (stardropsFound < 1) {
@@ -23,7 +23,10 @@ public class StardropBuffs {
             Buff buff = new Buff(
             id: $"{id}_StardropBuffs",
             source: $"{id}",
-            displaySource: $"{stardropsFound} Stardrops",
+            displaySource: "Better Stardrops",
+            displayName: $"Stardrops: {stardropsFound}",
+            description: GetDescription(),
+            iconTexture: helper.ModContent.Load<Texture2D>("assets/Stardrop.png"),
             duration: Buff.ENDLESS,
             effects: new BuffEffects() {
                 Attack = { GetPower(Config.EnableAttack, Config.AttackAmount) },
@@ -46,14 +49,52 @@ public class StardropBuffs {
             });
 
             Game1.player.applyBuff(buff);
-            buff.visible = ModEntry.Config.ShowLogging;
+            buff.visible = Config.ShowBuff;
 
-            Game1.player.stamina = Game1.player.MaxStamina;
+            Game1.player.stamina += GetPower(Config.EnableStamina, Config.StaminaAmount);
 
             RevalidateHealth(Game1.player);
             Game1.player.maxHealth += GetPower(Config.EnableHealth, Config.HealthAmount);
             Game1.player.health = Game1.player.maxHealth;
         }
+    }
+
+    static string GetDescription() {
+        ModConfig config = ModEntry.Config;
+        string finalString = "Oops, something went wrong. You shouldn't be seeing this.";
+        string healthAmount = null!;
+        string healthRegen = null!;
+        string energyRegen = null!;
+
+        if (config.EnableHealth) {
+            healthAmount = $"+{config.HealthAmount * stardropsFound} Health";
+        }
+        if (config.EnableHealthRegen) {
+            healthRegen = $"+{config.HealthRegenAmount * stardropsFound} Health/sec";
+        }
+        if (config.EnableStaminaRegen) {
+            energyRegen = $"+{config.StaminaRegenAmount * stardropsFound} Energy/sec";
+        }
+
+        if (healthAmount != null && healthRegen != null && energyRegen != null) {
+            finalString = healthAmount + "\n" + healthRegen + "\n" + energyRegen;
+        } else if (healthAmount != null && healthRegen != null && energyRegen == null) {
+            finalString = healthAmount + "\n" + healthRegen;
+        } else if (healthAmount != null && healthRegen == null && energyRegen != null) {
+            finalString = healthAmount + "\n" + energyRegen;
+        }  else if (healthAmount == null && healthRegen != null && energyRegen != null) {
+            finalString = healthRegen + "\n" + energyRegen;
+        } else if (healthAmount != null && healthRegen == null && energyRegen == null) {
+            finalString = healthAmount;
+        } else if (healthAmount == null && healthRegen != null && energyRegen == null) {
+            finalString = healthRegen;
+        } else if (healthAmount == null && healthRegen == null && energyRegen != null) {
+            finalString = energyRegen;
+        } else {
+            finalString = null!;
+        }
+
+        return finalString;
     }
 
     static float GetPower(bool enabled, float power) {
@@ -81,7 +122,7 @@ public class StardropBuffs {
             expected_max_health += 25;
         }
         if (farmer.maxHealth != expected_max_health) {
-            ModEntry.SMonitor.Log("Max health not expected value, adjusting.", LogLevel.Warn);
+            ModEntry.SMonitor.Log("\nMax health not expected value, adjusting.", ModEntry.DesiredLogLevel);
             farmer.maxHealth = expected_max_health;
             farmer.health = farmer.maxHealth;
         }

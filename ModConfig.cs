@@ -3,6 +3,8 @@
 
         public bool ShowLogging { get; set; } = false;
 
+        public bool ShowBuff { get; set; } = false;
+
         public bool EnableAttack { get; set; } = true;
         public float AttackAmount { get; set; } = 3f;
 

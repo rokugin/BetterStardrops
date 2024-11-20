@@ -1,5 +1,5 @@
 {
-  "info.text": "Changes made outside the main menu require sleeping or reloading the save.\n",
+  "info.text": "Changes made while outside the main menu require sleeping or reloading the save.\n",
 
   "enabled.label": "Enabled",
   "buff-power.label": "Buff Power",
@@ -8,15 +8,18 @@
   "enable-logging.label": "Enable Logging",
   "enable-logging.tooltip": "Shows informational logs in SMAPI console.",
 
+  "show-buff.label": "Show Buff",
+  "show-buff.tooltip": "Enable to show buff in top right of screen.\nDefault: false",
+
   "general-page.label": "General Buffs",
   "health-buff.label": "Health Buff",
   "health-buff.tooltip": "Max Health granted per Stardrop.\nDefault: 14",
   "health-regen.label": "Health Regen",
   "health-regen.tooltip": "Health regen per second.\nDefault: 0.15",
-  "stamina-buff.label": "Stamina Buff",
-  "stamina-buff.tooltip": "Max Stamina granted per Stardrop.\nDefault 6",
-  "stamina-regen.label": "Stamina Regen",
-  "stamina-regen.tooltip": "Stamina regen per second.\nDefault: 0.15",
+  "stamina-buff.label": "Energy Buff",
+  "stamina-buff.tooltip": "Max Energy granted per Stardrop.\nDefault: 6",
+  "stamina-regen.label": "Energy Regen",
+  "stamina-regen.tooltip": "Energy regen per second.\nDefault: 0.15",
   "magnetic-buff.label": "Magnetic Radius Buff",
   "magnetic-buff.tooltip": "Every 64 points of Magnetic Radius increase should equate to about 1 tile distance.\nDefault: 64",
   "speed-buff.label": "Speed Buff",

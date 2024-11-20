@@ -1,6 +1,5 @@
 ﻿using StardewModdingAPI;
 using StardewValley;
-using StardewValley.Menus;
 using StardewModdingAPI.Events;
 
 namespace BetterStardrops;
@@ -64,7 +63,7 @@ public class ModEntry : Mod {
     private void OnDayStarted(object? sender, DayStartedEventArgs e) {
         doHealthRegen = Config.EnableHealthRegen;
         doStaminaRegen = Config.EnableStaminaRegen;
-        StardropBuffs.DoBuffs(ModManifest.UniqueID, Config);
+        StardropBuffs.DoBuffs(ModManifest.UniqueID, Config, Helper);
     }
 
     void SetUpGMCM() {
@@ -78,6 +77,11 @@ public class ModEntry : Mod {
         CM.AddPageLink(ModManifest, "General", () => I18n.GeneralPage_Label());
         CM.AddPageLink(ModManifest, "Combat", () => I18n.CombatPage_Label());
         CM.AddPageLink(ModManifest, "Skills", () => I18n.SkillsPage_Label());
+
+        CM.AddParagraph(ModManifest, () => " ");
+
+        CM.AddSectionTitle(ModManifest, () => I18n.ShowBuff_Label());
+        CM.AddBoolOption(ModManifest, () => Config.ShowBuff, v => Config.ShowBuff = v, () => I18n.Enabled_Label(), () => I18n.ShowBuff_Tooltip());
 
         CM.AddParagraph(ModManifest, () => " ");
 
