@@ -57,7 +57,7 @@
         public float SpeedAmount { get; set; } = 0.3f;
 
         public bool EnableWeaponSpeed { get; set; } = true;
-        public float WeaponSpeedAmount { get; set; } = 0.03f;
+        public float WeaponSpeedAmount { get; set; } = 0.3f;
 
         public bool EnableHealthRegen { get; set; } = true;
         public float HealthRegenAmount { get; set; } = 0.15f;

@@ -67,13 +67,13 @@ public class StardropBuffs {
         string energyRegen = null!;
 
         if (config.EnableHealth) {
-            healthAmount = $"+{config.HealthAmount * stardropsFound} Health";
+            healthAmount = $"+{GetPower(config.EnableHealth, config.HealthAmount)} Health";
         }
         if (config.EnableHealthRegen) {
-            healthRegen = $"+{config.HealthRegenAmount * stardropsFound} Health/sec";
+            healthRegen = $"+{GetPower(config.EnableHealthRegen, config.HealthRegenAmount)} Health/sec";
         }
         if (config.EnableStaminaRegen) {
-            energyRegen = $"+{config.StaminaRegenAmount * stardropsFound} Energy/sec";
+            energyRegen = $"+{GetPower(config.EnableStaminaRegen, config.StaminaRegenAmount)} Energy/sec";
         }
 
         if (healthAmount != null && healthRegen != null && energyRegen != null) {
@@ -98,7 +98,7 @@ public class StardropBuffs {
     }
 
     static float GetPower(bool enabled, float power) {
-        return enabled ? power * stardropsFound : 0;
+        return (float)Math.Round(enabled ? power * stardropsFound : 0, 3);
     }
 
     static int GetPower(bool enabled, int power) {

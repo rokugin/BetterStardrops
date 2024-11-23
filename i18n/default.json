@@ -37,7 +37,7 @@
   "knockback-multiplier-buff.label": "Knockback Multiplier Buff",
   "knockback-multiplier-buff.tooltip": "Multiplies monster knockback when hit by player.\nDefault: 0.03",
   "weapon-speed-multiplier-buff.label": "Weapon Speed Multiplier Buff",
-  "weapon-speed-multiplier-buff.tooltip": "Multiplies weapon swing speed.\nDefault: 0.03",
+  "weapon-speed-multiplier-buff.tooltip": "Multiplies weapon swing speed.\nDefault: 0.3",
   "defense-buff.label": "Defense Buff",
   "defense-buff.tooltip": "Each point of Defense reduces incoming damage by 1.\nDefault: 3",
   "immunity-buff.label": "Immunity Buff",
