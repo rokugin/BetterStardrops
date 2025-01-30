@@ -15,6 +15,7 @@ public class ModEntry : Mod {
     bool doStaminaRegen;
     float healthRecoveryTick = 0;
     float staminaRecoveryTick = 0;
+    int stardropsFound => Utility.numStardropsFound(Game1.player);
 
     public override void Entry(IModHelper helper) {
         SMonitor = Monitor;
@@ -31,26 +32,28 @@ public class ModEntry : Mod {
 
         if (doHealthRegen) {
             if (e.IsOneSecond) {
-                healthRecoveryTick += Config.HealthRegenAmount;
+                healthRecoveryTick += Config.HealthRegenAmount * stardropsFound;
             }
 
             if (healthRecoveryTick >= 1) {
-                healthRecoveryTick -= 1;
+                int healthRecoveryAmount = (int)healthRecoveryTick;
+                healthRecoveryTick -= (int)healthRecoveryTick;
                 if (Game1.player.health < Game1.player.maxHealth) {
-                    Game1.player.health += 1;
+                    Game1.player.health += healthRecoveryAmount;
                 }
             }
         }
 
         if (doStaminaRegen) {
             if (e.IsOneSecond) {
-                staminaRecoveryTick += Config.StaminaRegenAmount;
+                staminaRecoveryTick += Config.StaminaRegenAmount * stardropsFound;
             }
 
             if (staminaRecoveryTick >= 1) {
-                staminaRecoveryTick -= 1;
+                int staminaRecoveryAmount = (int)staminaRecoveryTick;
+                staminaRecoveryTick -= (int)staminaRecoveryTick;
                 if (Game1.player.stamina < Game1.player.MaxStamina) {
-                    Game1.player.stamina += 1;
+                    Game1.player.stamina += staminaRecoveryAmount;
                 }
             }
         }
